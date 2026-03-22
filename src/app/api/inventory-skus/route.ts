@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   if (env.SP_API_USE_MOCK || !hasSpApiCredentials(env)) {
     let skus = MOCK_INVENTORY_SKUS;
     if (!includeExcluded) {
-      const ex = loadSkuExclusionsSet();
+      const ex = await loadSkuExclusionsSet();
       skus = skus.filter((s) => !ex.has(s.sku));
     }
     return NextResponse.json({
@@ -62,7 +62,7 @@ export async function GET(req: Request) {
       .filter((x): x is NonNullable<typeof x> => x != null);
 
     if (!includeExcluded) {
-      const ex = loadSkuExclusionsSet();
+      const ex = await loadSkuExclusionsSet();
       skus = skus.filter((s) => !ex.has(s.sku));
     }
 

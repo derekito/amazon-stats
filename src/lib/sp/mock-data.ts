@@ -167,10 +167,10 @@ function mockProductPagination(
   };
 }
 
-export function getMockDashboard(
+export async function getMockDashboard(
   period: SalesPeriod,
   options?: { productPage?: number; productPageSize?: number },
-): DashboardPayload {
+): Promise<DashboardPayload> {
   const requestedSize = options?.productPageSize ?? 40;
   const unlimited = requestedSize <= 0;
   const pageSizeCap = 50_000;
@@ -184,7 +184,7 @@ export function getMockDashboard(
   const currentSales = Math.round(currentTotalUnits * 14.25 * 100) / 100;
   const priorSales = Math.round(priorTotalUnits * 13.9 * 100) / 100;
 
-  const skuExcluded = loadSkuExclusionsSet();
+  const skuExcluded = await loadSkuExclusionsSet();
   const excludedSkuCount = baseProducts.filter((p) => skuExcluded.has(p.sku)).length;
   const baseFiltered = baseProducts.filter((p) => !skuExcluded.has(p.sku));
 

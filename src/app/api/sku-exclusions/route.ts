@@ -8,7 +8,8 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json({ excluded: loadSkuExclusionsList() });
+  const excluded = await loadSkuExclusionsList();
+  return NextResponse.json({ excluded });
 }
 
 export async function PUT(req: Request) {
@@ -29,6 +30,11 @@ export async function PUT(req: Request) {
     .filter((x): x is string => typeof x === "string")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
-  saveSkuExclusionsList(list);
+  try {
+    await saveSkuExclusionsList(list);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Save failed";
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
   return NextResponse.json({ ok: true, count: list.length });
 }

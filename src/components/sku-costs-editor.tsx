@@ -216,7 +216,7 @@ export function SkuCostsEditor() {
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((j as { error?: string }).error ?? res.statusText);
-      setMessage(`Saved ${(j as { count?: number }).count ?? Object.keys(costs).length} SKUs to data/sku-costs.json`);
+      setMessage(`Saved ${(j as { count?: number }).count ?? Object.keys(costs).length} SKU cost(s).`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -237,7 +237,7 @@ export function SkuCostsEditor() {
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((j as { error?: string }).error ?? res.statusText);
       setMessage(
-        `Imported ${(j as { importedRows?: number }).importedRows} rows; ${(j as { savedSkus?: number }).savedSkus} SKUs in file.`,
+        `Imported ${(j as { importedRows?: number }).importedRows} rows; ${(j as { savedSkus?: number }).savedSkus} SKU cost(s) saved.`,
       );
       await load();
     } catch (e) {
@@ -300,7 +300,7 @@ export function SkuCostsEditor() {
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((j as { error?: string }).error ?? res.statusText);
       setExcludedSkus(next);
-      setMessage(`Saved ${next.length} excluded SKU(s) to data/sku-exclusions.json`);
+      setMessage(`Saved ${next.length} excluded SKU(s).`);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
@@ -371,7 +371,7 @@ export function SkuCostsEditor() {
     if (keySet.size === 0) return;
     if (
       !window.confirm(
-        `Remove ${keySet.size} row(s) from the table and delete their unit costs from sku-costs.json? Inventory SKUs will reappear after Reload if they are still in FBA.`,
+        `Remove ${keySet.size} row(s) from the table and delete their unit costs? Inventory SKUs will reappear after Reload if they are still in FBA.`,
       )
     ) {
       return;
@@ -392,7 +392,7 @@ export function SkuCostsEditor() {
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((j as { error?: string }).error ?? res.statusText);
       setMessage(
-        `Deleted ${keySet.size} row(s); saved ${(j as { count?: number }).count ?? Object.keys(costs).length} SKUs to data/sku-costs.json`,
+        `Deleted ${keySet.size} row(s); saved ${(j as { count?: number }).count ?? Object.keys(costs).length} SKU cost(s).`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
@@ -477,10 +477,15 @@ export function SkuCostsEditor() {
           SKU costs & exclusions
         </h1>
         <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Unit costs live in <span className="font-mono text-xs">data/sku-costs.json</span>. Inactive
-          SKUs go in <span className="font-mono text-xs">data/sku-exclusions.json</span> — they disappear
-          from the main dashboard and from the unit-cost table (cost rows in the file are ignored until
-          you remove the exclusion).
+          Unit costs are stored locally in{" "}
+          <span className="font-mono text-xs">data/sku-costs.json</span> or on Vercel in{" "}
+          <span className="font-mono text-xs">Blob</span> when{" "}
+          <span className="font-mono text-xs">BLOB_READ_WRITE_TOKEN</span> is set. Inactive
+          SKUs are listed as exclusions — locally in{" "}
+          <span className="font-mono text-xs">data/sku-exclusions.json</span>, or on Vercel in{" "}
+          <span className="font-mono text-xs">Blob</span> when{" "}
+          <span className="font-mono text-xs">BLOB_READ_WRITE_TOKEN</span> is set — they disappear from
+          the main dashboard and from the unit-cost table until you remove the exclusion.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {tabBtn("unitCosts", "Unit costs")}
@@ -503,9 +508,7 @@ export function SkuCostsEditor() {
         <div className="flex flex-col gap-8">
           <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
             These SKUs are omitted from the <strong>dashboard</strong> product table and the{" "}
-            <strong>Unit costs</strong> tab. Cost data in{" "}
-            <span className="font-mono text-xs">sku-costs.json</span> is left as-is; remove an
-            exclusion here to show the SKU again.
+            <strong>Unit costs</strong> tab.             Saved unit cost entries are left as-is; remove an exclusion here to show the SKU again.
           </p>
           <div className="flex flex-wrap items-end gap-2">
             <div className="flex min-w-[12rem] flex-col gap-1">
@@ -704,7 +707,7 @@ export function SkuCostsEditor() {
               loading
             }
             onClick={() => void deleteSelectedUnitCostRows()}
-            title="Remove checked rows and drop their costs from sku-costs.json"
+            title="Remove checked rows and drop their saved unit costs"
             className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-900 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
           >
             {saving

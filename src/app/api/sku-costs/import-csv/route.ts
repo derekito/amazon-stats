@@ -27,7 +27,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No valid rows (need sku + unitCost columns)" }, { status: 400 });
   }
 
-  const next = merge ? { ...loadSkuCostsMap(), ...imported } : imported;
-  saveSkuCostsMap(next);
+  const existing = await loadSkuCostsMap();
+  const next = merge ? { ...existing, ...imported } : imported;
+  try {
+    await saveSkuCostsMap(next);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Save failed";
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
   return NextResponse.json({ ok: true, importedRows: n, savedSkus: Object.keys(next).length });
 }

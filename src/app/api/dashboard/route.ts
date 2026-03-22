@@ -53,7 +53,9 @@ export async function GET(req: Request) {
   const productPageSize = configuredPageSize <= 0 ? 0 : configuredPageSize;
   const productPage = parsePositiveInt(searchParams.get("productPage"), 1, 1, 10_000);
   if (env.SP_API_USE_MOCK || !hasSpApiCredentials(env)) {
-    return NextResponse.json(getMockDashboard(period, { productPage, productPageSize }));
+    return NextResponse.json(
+      await getMockDashboard(period, { productPage, productPageSize }),
+    );
   }
 
   try {
@@ -67,7 +69,7 @@ export async function GET(req: Request) {
   } catch (e) {
     const message = formatSpApiError(e);
     return NextResponse.json({
-      ...getMockDashboard(period, { productPage, productPageSize }),
+      ...(await getMockDashboard(period, { productPage, productPageSize })),
       mode: "mock",
       warning: `Could not load live Amazon data (${message}). Showing sample data instead.`,
     });

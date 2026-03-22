@@ -155,8 +155,8 @@ export async function fetchLiveDashboard(
   const priorRange = getPriorOrderMetricsRange(period);
   const forecastWindowDays = intervalSpanDays(range.interval);
   const skuThresholds = loadSkuThresholdsMap();
-  const skuCosts = loadSkuCostsMap();
-  const skuExcluded = loadSkuExclusionsSet();
+  const skuCosts = await loadSkuCostsMap();
+  const skuExcluded = await loadSkuExclusionsSet();
   const referralFeePercent = env.SP_DASHBOARD_REFERRAL_FEE_PERCENT;
   const fbaFeePerUnit = env.SP_DASHBOARD_FBA_FEE_PER_UNIT;
   const estimatedAcosPercent = env.SP_DASHBOARD_ESTIMATED_ACOS_PERCENT;

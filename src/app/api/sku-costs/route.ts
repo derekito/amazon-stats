@@ -28,8 +28,9 @@ function normalizeCostsBody(raw: unknown): Record<string, SkuCostEntry> | null {
 
 export async function GET() {
   const env = getEnv();
+  const costs = await loadSkuCostsMap();
   return NextResponse.json({
-    costs: loadSkuCostsMap(),
+    costs,
     sheetSyncConfigured: Boolean(env.SP_SKU_COSTS_SHEET_CSV_URL),
   });
 }
@@ -45,6 +46,11 @@ export async function PUT(req: Request) {
   if (costs == null) {
     return NextResponse.json({ error: "Expected body { costs: { [sku]: { unitCost, currency? } } }" }, { status: 400 });
   }
-  saveSkuCostsMap(costs);
+  try {
+    await saveSkuCostsMap(costs);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Save failed";
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
   return NextResponse.json({ ok: true, count: Object.keys(costs).length });
 }
