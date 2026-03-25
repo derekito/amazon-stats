@@ -15,6 +15,9 @@ export async function SiteNav() {
           <Link href="/" className={link}>
             Dashboard
           </Link>
+          <Link href="/sales" className={link}>
+            Sales
+          </Link>
           <Link href="/costs" className={link}>
             SKU costs
           </Link>

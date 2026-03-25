@@ -6,6 +6,7 @@ A small [Next.js](https://nextjs.org) app that reads your **Selling Partner API 
 - **Inventory** — FBA fulfillable quantity, SKU, title, and (when available) a product image from the [FBA Inventory API](https://developer-docs.amazon.com/sp-api/docs/fba-inventory-api-v1-reference) and [Catalog Items API](https://developer-docs.amazon.com/sp-api/docs/catalog-items-api-v0-reference).
 - **Ordered quantity** — units sold for each SKU over that **same** interval (per tab above), via `getOrderMetrics` with `granularity=Total` and `sku` (same window used for the simple forecast).
 - **Forecast** — **days of cover**: current stock ÷ average daily units from that window (shown as “—” if velocity is negligible).
+- **Sales overview** — Open **`/sales`** (or **Sales** in the nav) for **yesterday (UTC)** KPIs and a **10-day** daily bar chart (toggle **units** vs **ordered product sales**). Uses only the Sales API (no FBA/Catalog), so it loads faster than the main dashboard.
 
 Without credentials, the UI runs on **sample data** so you can develop the layout immediately.
 

@@ -83,6 +83,41 @@ export function getOrderMetricsRange(period: SalesPeriod, now = new Date()) {
 /**
  * Same length as `getOrderMetricsRange(period)` but shifted immediately before it (for PoP comparison).
  */
+/**
+ * Rolling **10** UTC calendar days ending “now” (same pattern as Week: start = 9 days back 00:00 UTC,
+ * end = start of tomorrow UTC) — for Sales API daily buckets.
+ */
+export function getTenDayOrderMetricsRange(now = new Date()) {
+  const start = utcStartOfDay(subDays(now, 9));
+  const endExclusive = utcStartOfNextDay(now);
+  return {
+    interval: toSpInterval(start, endExclusive),
+    granularity: "Day" as const,
+    label: "Last 10 days",
+  };
+}
+
+/** The 10-day window immediately before `getTenDayOrderMetricsRange` (for PoP comparison). */
+export function getPriorTenDayRange(now = new Date()) {
+  const current = getTenDayOrderMetricsRange(now);
+  const sep = "--";
+  const idx = current.interval.indexOf(sep);
+  const startStr = current.interval.slice(0, idx).trim();
+  const endStr = current.interval.slice(idx + sep.length).trim();
+  const start = parseISO(startStr);
+  const endExclusive = parseISO(endStr);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(endExclusive.getTime())) {
+    return current;
+  }
+  const priorEndExclusive = start;
+  const priorStartInclusive = new Date(priorEndExclusive.getTime() - (endExclusive.getTime() - start.getTime()));
+  return {
+    interval: toSpInterval(priorStartInclusive, priorEndExclusive),
+    granularity: "Day" as const,
+    label: "Prior 10 days",
+  };
+}
+
 export function getPriorOrderMetricsRange(period: SalesPeriod, now = new Date()) {
   const current = getOrderMetricsRange(period, now);
   const sep = "--";

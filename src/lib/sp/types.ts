@@ -101,6 +101,26 @@ export type FeeAssumptions = {
   estimatedAcosPercent: number;
 };
 
+/** Lightweight `/sales` page: marketplace sales only (no FBA / Catalog). */
+export type SalesOverviewPayload = {
+  mode: DashboardMode;
+  marketplaceId: string;
+  /** Single complete UTC calendar day (yesterday). */
+  yesterday: MetricsWindowTotals;
+  tenDay: {
+    rangeLabel: string;
+    series: SalesPoint[];
+    totals: MetricsWindowTotals;
+    /** Totals ÷ 10. */
+    avgUnitsPerDay: number;
+    avgSalesPerDay: number | null;
+    avgSalesCurrency: string | null;
+  };
+  /** Same-length window before the 10-day chart; null if the Sales call failed. */
+  priorTenDay: MetricsWindowTotals | null;
+  warning?: string;
+};
+
 export type DashboardPayload = {
   mode: DashboardMode;
   marketplaceId: string;

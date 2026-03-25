@@ -8,7 +8,13 @@ import {
 import { estimateRoughMargin } from "@/lib/sp/margin-estimate";
 import { loadSkuExclusionsSet } from "@/lib/sp/load-sku-exclusions";
 import { computeProductAlerts, velocityUnitsPerDay } from "@/lib/sp/product-insights";
-import type { DashboardPayload, DashboardThresholds, ProductPagination, ProductRow } from "@/lib/sp/types";
+import type {
+  DashboardPayload,
+  DashboardThresholds,
+  ProductPagination,
+  ProductRow,
+  SalesOverviewPayload,
+} from "@/lib/sp/types";
 import { assignVelocityTiers } from "@/lib/sp/velocity-tier";
 
 /** Baseline window for mock ordered/sales scalars (matches former 90d copy). */
@@ -317,6 +323,60 @@ export async function getMockDashboard(
     restockReport: {
       asOf: new Date().toISOString(),
       skuCountInReport: baseFiltered.length,
+    },
+  };
+}
+
+/** Sample data for `/sales` (no live SP-API). */
+export function getMockSalesOverview(): SalesOverviewPayload {
+  const tenSeries = Array.from({ length: 10 }, (_, i) => {
+    const unitCount = Math.round(16 + (i % 5) * 3 + i * 0.4);
+    const ps = pointSalesFromUnits(unitCount);
+    return {
+      label: `D${i + 1}`,
+      unitCount,
+      salesAmount: ps.salesAmount,
+      salesCurrency: ps.salesCurrency,
+    };
+  });
+  let totalUnits = 0;
+  let totalSales = 0;
+  for (const p of tenSeries) {
+    totalUnits += p.unitCount;
+    totalSales += p.salesAmount ?? 0;
+  }
+  const yesterdayUnits = 22;
+  const y = pointSalesFromUnits(yesterdayUnits);
+  const priorUnits = Math.max(0, Math.round(totalUnits * 0.88));
+  const priorSales = Math.round(totalSales * 0.87 * 100) / 100;
+
+  return {
+    mode: "mock",
+    marketplaceId: "ATVPDKIKX0DER",
+    yesterday: {
+      label: "Yesterday (UTC)",
+      totalUnits: yesterdayUnits,
+      totalSalesAmount: y.salesAmount,
+      totalSalesCurrency: y.salesCurrency,
+    },
+    tenDay: {
+      rangeLabel: "Last 10 days",
+      series: tenSeries,
+      totals: {
+        label: "Last 10 days",
+        totalUnits,
+        totalSalesAmount: Math.round(totalSales * 100) / 100,
+        totalSalesCurrency: "USD",
+      },
+      avgUnitsPerDay: totalUnits / 10,
+      avgSalesPerDay: Math.round((totalSales / 10) * 100) / 100,
+      avgSalesCurrency: "USD",
+    },
+    priorTenDay: {
+      label: "Prior 10 days",
+      totalUnits: priorUnits,
+      totalSalesAmount: priorSales,
+      totalSalesCurrency: "USD",
     },
   };
 }
