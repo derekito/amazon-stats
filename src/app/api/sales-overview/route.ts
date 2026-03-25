@@ -8,8 +8,6 @@ import { getMockSalesOverview } from "@/lib/sp/mock-data";
 
 export const dynamic = "force-dynamic";
 
-const SALES_OVERVIEW_TIMEOUT_MS = 120_000;
-
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise((resolve, reject) => {
     const t = setTimeout(() => {
@@ -38,7 +36,7 @@ export async function GET() {
     const sp = createSellingPartner(env);
     const data = await withTimeout(
       fetchLiveSalesOverview(sp, env),
-      SALES_OVERVIEW_TIMEOUT_MS,
+      env.SP_API_DASHBOARD_TIMEOUT_MS,
       "Sales overview fetch",
     );
     return NextResponse.json(data);

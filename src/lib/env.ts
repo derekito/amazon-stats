@@ -39,6 +39,15 @@ const envSchema = z.object({
       z.number().int().min(0).max(500),
     ),
   /**
+   * `/sales` “Top 10” ranks by units sold in the last 10 days among **this many** FBA SKUs
+   * (highest inventory first). Higher = more accurate account-wide top sellers, slower. 0 = skip table.
+   */
+  SP_SALES_OVERVIEW_MAX_SKU_SCAN: z
+    .preprocess(
+      (v) => (v === undefined || v === "" ? 200 : Number(v)),
+      z.number().int().min(0).max(2000),
+    ),
+  /**
    * When live dashboard loads, fetch latest completed `GET_RESTOCK_INVENTORY_RECOMMENDATIONS_REPORT`
    * and show Amazon’s recommended replenishment qty per SKU. Set to 0/false to skip (faster; no Reports calls).
    */
@@ -179,6 +188,7 @@ export function getEnv(): AppEnv {
     SP_API_MAX_SKU_METRICS: process.env.SP_API_MAX_SKU_METRICS,
     SP_API_MAX_INVENTORY_PAGES: process.env.SP_API_MAX_INVENTORY_PAGES,
     SP_API_MAX_ASIN_THUMBNAILS: process.env.SP_API_MAX_ASIN_THUMBNAILS,
+    SP_SALES_OVERVIEW_MAX_SKU_SCAN: process.env.SP_SALES_OVERVIEW_MAX_SKU_SCAN,
     SP_API_FETCH_RESTOCK_REPORT: process.env.SP_API_FETCH_RESTOCK_REPORT,
     SP_API_RESTOCK_REPORT_MAX_AGE_HOURS: process.env.SP_API_RESTOCK_REPORT_MAX_AGE_HOURS,
     SP_API_DASHBOARD_TIMEOUT_MS: process.env.SP_API_DASHBOARD_TIMEOUT_MS,

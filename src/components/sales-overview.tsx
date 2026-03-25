@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { SalesOverviewPayload } from "@/lib/sp/types";
 
 const CHART_TRACK_PX = 160;
-const FETCH_TIMEOUT_MS = 130_000;
+/** Must exceed server timeout when many SKUs are scanned for Top 10. */
+const FETCH_TIMEOUT_MS = 630_000;
 
 let salesOverviewFetchSeq = 0;
 
@@ -34,6 +36,18 @@ function formatFullCurrency(amount: number, currency: string): string {
 function pctChange(current: number, prior: number): number | null {
   if (prior <= 0) return null;
   return ((current - prior) / prior) * 100;
+}
+
+function deltaClass(p: number | null): string {
+  if (p == null) return "text-zinc-500 dark:text-zinc-400";
+  if (p > 0) return "text-emerald-700 dark:text-emerald-400";
+  if (p < 0) return "text-red-700 dark:text-red-400";
+  return "text-zinc-600 dark:text-zinc-300";
+}
+
+function formatPctDelta(p: number | null): string {
+  if (p == null) return "—";
+  return `${p >= 0 ? "+" : ""}${p.toFixed(1)}%`;
 }
 
 function TenDayChart({
@@ -159,7 +173,7 @@ export function SalesOverview() {
   }, [data]);
 
   return (
-    <div className="mx-auto flex min-w-0 w-full max-w-4xl flex-col gap-10 px-4 py-10 sm:px-6 lg:px-8">
+    <div className="mx-auto flex min-w-0 w-full max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 lg:px-8">
       <header className="flex flex-col gap-2 border-b border-zinc-200 pb-8 dark:border-zinc-800">
         <p className="text-sm font-medium uppercase tracking-wide text-emerald-800 dark:text-emerald-400">
           Amazon Seller
@@ -305,6 +319,94 @@ export function SalesOverview() {
               metric={chartMetric}
               fallbackCurrency={fallbackCurrency}
             />
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              Top 10 selling products
+            </h2>
+            <p className="max-w-3xl text-sm text-zinc-600 dark:text-zinc-400">
+              Ranked by units sold in the last 10 UTC days (per-SKU Sales API). “vs prior 10d” compares the
+              same SKU to the previous 10 UTC days.
+            </p>
+            {data.topProductsHint && (
+              <p className="text-sm text-amber-800 dark:text-amber-200/90">{data.topProductsHint}</p>
+            )}
+            {data.topProducts.length === 0 ? (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                No top products (set SP_SALES_OVERVIEW_MAX_SKU_SCAN to a positive number to enable, or
+                check FBA inventory).
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+                <table className="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
+                  <thead>
+                    <tr className="text-left text-xs font-medium uppercase tracking-wide text-zinc-500">
+                      <th className="px-3 py-3 sm:px-4">Thumbnail</th>
+                      <th className="px-3 py-3 sm:px-4">SKU</th>
+                      <th className="px-3 py-3 text-right sm:px-4">Inventory</th>
+                      <th className="px-3 py-3 text-right sm:px-4">Units (10d)</th>
+                      <th className="px-3 py-3 text-right sm:px-4">Sales (10d)</th>
+                      <th className="px-3 py-3 text-right sm:px-4">Units vs prior 10d</th>
+                      <th className="px-3 py-3 text-right sm:px-4">Sales vs prior 10d</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {data.topProducts.map((row) => {
+                      const cur = row.salesCurrency ?? fallbackCurrency;
+                      return (
+                        <tr key={row.sku} className="text-zinc-900 dark:text-zinc-100">
+                          <td className="px-3 py-2 sm:px-4">
+                            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800">
+                              {row.thumbnailUrl ? (
+                                <Image
+                                  src={row.thumbnailUrl}
+                                  alt=""
+                                  fill
+                                  className="object-cover"
+                                  sizes="44px"
+                                  unoptimized
+                                />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-[9px] text-zinc-400">
+                                  —
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="max-w-[10rem] px-3 py-2 font-mono text-xs sm:max-w-xs sm:px-4">
+                            <span className="block truncate" title={row.title}>
+                              {row.sku}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums sm:px-4">
+                            {row.inventory.toLocaleString()}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums sm:px-4">
+                            {row.unitsSold.toLocaleString()}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums sm:px-4">
+                            {row.salesTotal != null && cur
+                              ? formatFullCurrency(row.salesTotal, cur)
+                              : "—"}
+                          </td>
+                          <td
+                            className={`px-3 py-2 text-right text-sm font-medium tabular-nums sm:px-4 ${deltaClass(row.unitsDeltaPct)}`}
+                          >
+                            {formatPctDelta(row.unitsDeltaPct)}
+                          </td>
+                          <td
+                            className={`px-3 py-2 text-right text-sm font-medium tabular-nums sm:px-4 ${deltaClass(row.salesDeltaPct)}`}
+                          >
+                            {formatPctDelta(row.salesDeltaPct)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
 
           <p className="text-xs text-zinc-400 dark:text-zinc-500">

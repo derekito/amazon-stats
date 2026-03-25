@@ -14,6 +14,7 @@ import type {
   ProductPagination,
   ProductRow,
   SalesOverviewPayload,
+  SalesOverviewTopProductRow,
 } from "@/lib/sp/types";
 import { assignVelocityTiers } from "@/lib/sp/velocity-tier";
 
@@ -378,5 +379,133 @@ export function getMockSalesOverview(): SalesOverviewPayload {
       totalSalesAmount: priorSales,
       totalSalesCurrency: "USD",
     },
+    topProducts: mockTopProducts(),
+    topProductsHint: undefined,
   };
+}
+
+function mockTopProducts(): SalesOverviewTopProductRow[] {
+  const seeds: Omit<
+    SalesOverviewTopProductRow,
+    "unitsDeltaPct" | "salesDeltaPct" | "priorUnitsSold" | "priorSalesTotal"
+  >[] = [
+    {
+      sku: "SKU-BRAVO-02",
+      asin: "B07ZPKBL9V",
+      title: "USB-C charging cable 6ft (mock)",
+      thumbnailUrl: null,
+      inventory: 890,
+      unitsSold: 210,
+      salesTotal: 1679.4,
+      salesCurrency: "USD",
+    },
+    {
+      sku: "SKU-CHARLIE-03",
+      asin: "B09V3KXJPB",
+      title: "Desk lamp LED adjustable (mock)",
+      thumbnailUrl: null,
+      inventory: 56,
+      unitsSold: 44,
+      salesTotal: 1319.56,
+      salesCurrency: "USD",
+    },
+    {
+      sku: "SKU-ALPHA-01",
+      asin: "B08N5WRWNW",
+      title: "Example wireless earbuds (mock)",
+      thumbnailUrl: null,
+      inventory: 142,
+      unitsSold: 38,
+      salesTotal: 949.99,
+      salesCurrency: "USD",
+    },
+    {
+      sku: "SKU-OUT-00",
+      asin: "B0STOCKOUT",
+      title: "Out of stock sample (mock)",
+      thumbnailUrl: null,
+      inventory: 0,
+      unitsSold: 12,
+      salesTotal: 199.99,
+      salesCurrency: "USD",
+    },
+    {
+      sku: "SKU-DEAD-99",
+      asin: "B0DEADMOCK",
+      title: "Slow mover — high stock, no sales (mock)",
+      thumbnailUrl: null,
+      inventory: 120,
+      unitsSold: 0,
+      salesTotal: null,
+      salesCurrency: null,
+    },
+    {
+      sku: "SKU-MOCK-06",
+      asin: "B0MOCK0006",
+      title: "Sample SKU 6 (mock)",
+      thumbnailUrl: null,
+      inventory: 48,
+      unitsSold: 28,
+      salesTotal: 419.72,
+      salesCurrency: "USD",
+    },
+    {
+      sku: "SKU-MOCK-07",
+      asin: "B0MOCK0007",
+      title: "Sample SKU 7 (mock)",
+      thumbnailUrl: null,
+      inventory: 33,
+      unitsSold: 22,
+      salesTotal: 329.1,
+      salesCurrency: "USD",
+    },
+    {
+      sku: "SKU-MOCK-08",
+      asin: "B0MOCK0008",
+      title: "Sample SKU 8 (mock)",
+      thumbnailUrl: null,
+      inventory: 201,
+      unitsSold: 18,
+      salesTotal: 269.99,
+      salesCurrency: "USD",
+    },
+    {
+      sku: "SKU-MOCK-09",
+      asin: "B0MOCK0009",
+      title: "Sample SKU 9 (mock)",
+      thumbnailUrl: null,
+      inventory: 12,
+      unitsSold: 15,
+      salesTotal: 199.5,
+      salesCurrency: "USD",
+    },
+    {
+      sku: "SKU-MOCK-10",
+      asin: "B0MOCK0010",
+      title: "Sample SKU 10 (mock)",
+      thumbnailUrl: null,
+      inventory: 64,
+      unitsSold: 11,
+      salesTotal: 149.89,
+      salesCurrency: "USD",
+    },
+  ];
+  return seeds.map((s, i) => {
+    const priorUnitsSold = Math.max(0, Math.round(s.unitsSold * (0.82 + i * 0.02)));
+    const priorSalesTotal =
+      s.salesTotal != null ? Math.round(s.salesTotal * 0.85 * 100) / 100 : null;
+    const unitsDeltaPct =
+      priorUnitsSold > 0 ? ((s.unitsSold - priorUnitsSold) / priorUnitsSold) * 100 : null;
+    const salesDeltaPct =
+      s.salesTotal != null && priorSalesTotal != null && priorSalesTotal > 0
+        ? ((s.salesTotal - priorSalesTotal) / priorSalesTotal) * 100
+        : null;
+    return {
+      ...s,
+      priorUnitsSold,
+      priorSalesTotal,
+      unitsDeltaPct,
+      salesDeltaPct,
+    };
+  });
 }

@@ -101,6 +101,24 @@ export type FeeAssumptions = {
   estimatedAcosPercent: number;
 };
 
+/** One row in `/sales` Top 10 table (last 10 UTC days vs prior 10 UTC days). */
+export type SalesOverviewTopProductRow = {
+  sku: string;
+  asin: string | null;
+  title: string;
+  thumbnailUrl: string | null;
+  inventory: number;
+  unitsSold: number;
+  salesTotal: number | null;
+  salesCurrency: string | null;
+  priorUnitsSold: number;
+  priorSalesTotal: number | null;
+  /** Percent change in units vs prior 10d; null if prior was 0. */
+  unitsDeltaPct: number | null;
+  /** Percent change in sales vs prior 10d; null if prior was 0 or no sales amounts. */
+  salesDeltaPct: number | null;
+};
+
 /** Lightweight `/sales` page: marketplace sales only (no FBA / Catalog). */
 export type SalesOverviewPayload = {
   mode: DashboardMode;
@@ -118,6 +136,9 @@ export type SalesOverviewPayload = {
   };
   /** Same-length window before the 10-day chart; null if the Sales call failed. */
   priorTenDay: MetricsWindowTotals | null;
+  topProducts: SalesOverviewTopProductRow[];
+  /** When inventory pages or SKU scan cap limits ranking accuracy. */
+  topProductsHint?: string;
   warning?: string;
 };
 
