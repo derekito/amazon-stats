@@ -59,7 +59,12 @@ function TopSkuDeltaCell({
 }) {
   if (fromZero) {
     return (
-      <span className="font-medium text-emerald-700 dark:text-emerald-400">New</span>
+      <span
+        className="cursor-help font-medium text-emerald-700 underline decoration-dotted decoration-emerald-600/50 underline-offset-2 dark:text-emerald-400 dark:decoration-emerald-400/50"
+        title="Prior 10 UTC days had 0 here; this period has sales. This is not ‘unchanged’—see 0.0% when the two periods match."
+      >
+        New
+      </span>
     );
   }
   if (pct == null) {
@@ -347,9 +352,11 @@ export function SalesOverview() {
             </h2>
             <p className="max-w-3xl text-sm text-zinc-600 dark:text-zinc-400">
               Ranked by units sold in the last 10 UTC days (per-SKU Sales API). “vs prior 10d” compares the
-              same SKU to the previous 10 UTC days. Negative % (red) means fewer units or sales than the prior
-              window; <span className="text-emerald-600 dark:text-emerald-400">New</span> means the prior
-              window had zero.
+              same SKU to the <strong>previous</strong> 10 UTC days.{" "}
+              <span className="text-emerald-600 dark:text-emerald-400">New</span> means that column had{" "}
+              <strong>zero</strong> in the prior window and <strong>some</strong> in the current window (not
+              “unchanged”). <strong>0.0%</strong> means the two windows match when the prior window was already
+              above zero. Negative % (red) means fewer units or sales than the prior window.
             </p>
             {data.topProductsHint && (
               <p className="text-sm text-amber-800 dark:text-amber-200/90">{data.topProductsHint}</p>
