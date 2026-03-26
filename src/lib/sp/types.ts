@@ -113,10 +113,14 @@ export type SalesOverviewTopProductRow = {
   salesCurrency: string | null;
   priorUnitsSold: number;
   priorSalesTotal: number | null;
-  /** Percent change in units vs prior 10d; null if prior was 0. */
+  /** Percent change in units vs prior 10d (negative = drop, red in UI). */
   unitsDeltaPct: number | null;
-  /** Percent change in sales vs prior 10d; null if prior was 0 or no sales amounts. */
+  /** Prior 10d had 0 units with current sales — UI shows “New” instead of a %. */
+  unitsDeltaFromZero?: boolean;
+  /** Percent change in sales vs prior 10d (negative = drop). Null when no $ in either window. */
   salesDeltaPct: number | null;
+  /** Prior 10d had no sales $ and current does — UI shows “New”. */
+  salesDeltaFromZero?: boolean;
 };
 
 /** Lightweight `/sales` page: marketplace sales only (no FBA / Catalog). */

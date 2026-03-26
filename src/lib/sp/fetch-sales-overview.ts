@@ -23,6 +23,7 @@ import {
   sumOrderMetricsTotals,
 } from "@/lib/sp/parse-order-metrics";
 import { resolveMarketplaceId } from "@/lib/sp/marketplace";
+import { computeSalesDelta, computeUnitsDelta } from "@/lib/sp/sales-top-delta";
 import { runSpStep } from "@/lib/sp/sp-step";
 import type {
   MetricsWindowTotals,
@@ -128,11 +129,6 @@ function parseSkuWindowMetrics(payload: unknown): {
     salesAmount: hasSales ? salesSum : null,
     salesCurrency,
   };
-}
-
-function pctDelta(current: number, prior: number): number | null {
-  if (prior <= 0) return null;
-  return ((current - prior) / prior) * 100;
 }
 
 function rowsToSeries(rows: ReturnType<typeof parseOrderMetricsPayload>): SalesPoint[] {
@@ -271,8 +267,8 @@ async function buildTopProducts(
     };
     const asin = c.row.asin?.trim() || null;
     const thumb = asin ? imageByAsin.get(asin) ?? null : null;
-    const priorSales = prior.salesAmount ?? 0;
-    const curSales = c.salesAmount ?? 0;
+    const u = computeUnitsDelta(c.units, prior.units);
+    const s = computeSalesDelta(c.salesAmount, prior.salesAmount);
     return {
       sku: c.sku,
       asin,
@@ -284,9 +280,10 @@ async function buildTopProducts(
       salesCurrency: c.salesCurrency,
       priorUnitsSold: prior.units,
       priorSalesTotal: prior.salesAmount,
-      unitsDeltaPct: pctDelta(c.units, prior.units),
-      salesDeltaPct:
-        c.salesAmount != null && prior.salesAmount != null ? pctDelta(curSales, priorSales) : null,
+      unitsDeltaPct: u.pct,
+      ...(u.fromZero ? { unitsDeltaFromZero: true } : {}),
+      salesDeltaPct: s.pct,
+      ...(s.fromZero ? { salesDeltaFromZero: true } : {}),
     };
   });
 

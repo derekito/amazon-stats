@@ -16,6 +16,7 @@ import type {
   SalesOverviewPayload,
   SalesOverviewTopProductRow,
 } from "@/lib/sp/types";
+import { computeSalesDelta, computeUnitsDelta } from "@/lib/sp/sales-top-delta";
 import { assignVelocityTiers } from "@/lib/sp/velocity-tier";
 
 /** Baseline window for mock ordered/sales scalars (matches former 90d copy). */
@@ -491,21 +492,31 @@ function mockTopProducts(): SalesOverviewTopProductRow[] {
     },
   ];
   return seeds.map((s, i) => {
-    const priorUnitsSold = Math.max(0, Math.round(s.unitsSold * (0.82 + i * 0.02)));
-    const priorSalesTotal =
+    let priorUnitsSold = Math.max(0, Math.round(s.unitsSold * (0.82 + i * 0.02)));
+    let priorSalesTotal =
       s.salesTotal != null ? Math.round(s.salesTotal * 0.85 * 100) / 100 : null;
-    const unitsDeltaPct =
-      priorUnitsSold > 0 ? ((s.unitsSold - priorUnitsSold) / priorUnitsSold) * 100 : null;
-    const salesDeltaPct =
-      s.salesTotal != null && priorSalesTotal != null && priorSalesTotal > 0
-        ? ((s.salesTotal - priorSalesTotal) / priorSalesTotal) * 100
-        : null;
+    /** First row: prior window zero → “New” in UI. */
+    if (i === 0) {
+      priorUnitsSold = 0;
+      priorSalesTotal = s.salesTotal != null ? 0 : null;
+    }
+    /** One row with a decline so mock shows red negative %. */
+    if (i === 3 && s.unitsSold > 0) {
+      priorUnitsSold = s.unitsSold + 3;
+      if (priorSalesTotal != null && s.salesTotal != null) {
+        priorSalesTotal = Math.round(s.salesTotal * 1.25 * 100) / 100;
+      }
+    }
+    const u = computeUnitsDelta(s.unitsSold, priorUnitsSold);
+    const sd = computeSalesDelta(s.salesTotal, priorSalesTotal);
     return {
       ...s,
       priorUnitsSold,
       priorSalesTotal,
-      unitsDeltaPct,
-      salesDeltaPct,
+      unitsDeltaPct: u.pct,
+      ...(u.fromZero ? { unitsDeltaFromZero: true } : {}),
+      salesDeltaPct: sd.pct,
+      ...(sd.fromZero ? { salesDeltaFromZero: true } : {}),
     };
   });
 }

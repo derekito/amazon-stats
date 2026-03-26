@@ -50,6 +50,26 @@ function formatPctDelta(p: number | null): string {
   return `${p >= 0 ? "+" : ""}${p.toFixed(1)}%`;
 }
 
+function TopSkuDeltaCell({
+  pct,
+  fromZero,
+}: {
+  pct: number | null;
+  fromZero?: boolean;
+}) {
+  if (fromZero) {
+    return (
+      <span className="font-medium text-emerald-700 dark:text-emerald-400">New</span>
+    );
+  }
+  if (pct == null) {
+    return <span className="text-zinc-500 dark:text-zinc-400">—</span>;
+  }
+  return (
+    <span className={`font-medium tabular-nums ${deltaClass(pct)}`}>{formatPctDelta(pct)}</span>
+  );
+}
+
 function TenDayChart({
   series,
   metric,
@@ -327,7 +347,9 @@ export function SalesOverview() {
             </h2>
             <p className="max-w-3xl text-sm text-zinc-600 dark:text-zinc-400">
               Ranked by units sold in the last 10 UTC days (per-SKU Sales API). “vs prior 10d” compares the
-              same SKU to the previous 10 UTC days.
+              same SKU to the previous 10 UTC days. Negative % (red) means fewer units or sales than the prior
+              window; <span className="text-emerald-600 dark:text-emerald-400">New</span> means the prior
+              window had zero.
             </p>
             {data.topProductsHint && (
               <p className="text-sm text-amber-800 dark:text-amber-200/90">{data.topProductsHint}</p>
@@ -390,15 +412,17 @@ export function SalesOverview() {
                               ? formatFullCurrency(row.salesTotal, cur)
                               : "—"}
                           </td>
-                          <td
-                            className={`px-3 py-2 text-right text-sm font-medium tabular-nums sm:px-4 ${deltaClass(row.unitsDeltaPct)}`}
-                          >
-                            {formatPctDelta(row.unitsDeltaPct)}
+                          <td className="px-3 py-2 text-right text-sm sm:px-4">
+                            <TopSkuDeltaCell
+                              pct={row.unitsDeltaPct}
+                              fromZero={row.unitsDeltaFromZero}
+                            />
                           </td>
-                          <td
-                            className={`px-3 py-2 text-right text-sm font-medium tabular-nums sm:px-4 ${deltaClass(row.salesDeltaPct)}`}
-                          >
-                            {formatPctDelta(row.salesDeltaPct)}
+                          <td className="px-3 py-2 text-right text-sm sm:px-4">
+                            <TopSkuDeltaCell
+                              pct={row.salesDeltaPct}
+                              fromZero={row.salesDeltaFromZero}
+                            />
                           </td>
                         </tr>
                       );
