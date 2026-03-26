@@ -39,7 +39,7 @@ const envSchema = z.object({
       z.number().int().min(0).max(500),
     ),
   /**
-   * `/sales` “Top 10” ranks by units sold in the last 10 days among **this many** FBA SKUs
+   * `/sales` top table ranks by units sold in the last 10 days among **this many** FBA SKUs
    * (highest inventory first). Higher = more accurate account-wide top sellers, slower. 0 = skip table.
    */
   SP_SALES_OVERVIEW_MAX_SKU_SCAN: z

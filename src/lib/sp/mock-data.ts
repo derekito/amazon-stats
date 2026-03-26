@@ -490,6 +490,20 @@ function mockTopProducts(): SalesOverviewTopProductRow[] {
       salesTotal: 149.89,
       salesCurrency: "USD",
     },
+    ...Array.from({ length: 10 }, (_, j) => {
+      const n = 11 + j;
+      const u = Math.max(1, 10 - j);
+      return {
+        sku: `SKU-MOCK-${n}`,
+        asin: `B0MOCK${String(n).padStart(4, "0")}`,
+        title: `Sample SKU ${n} (mock)`,
+        thumbnailUrl: null,
+        inventory: 15 + j * 4,
+        unitsSold: u,
+        salesTotal: Math.round(u * 22.5 * 100) / 100,
+        salesCurrency: "USD" as const,
+      };
+    }),
   ];
   return seeds.map((s, i) => {
     let priorUnitsSold = Math.max(0, Math.round(s.unitsSold * (0.82 + i * 0.02)));

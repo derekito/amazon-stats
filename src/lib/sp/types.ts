@@ -101,7 +101,7 @@ export type FeeAssumptions = {
   estimatedAcosPercent: number;
 };
 
-/** One row in `/sales` Top 10 table (last 10 UTC days vs prior 10 UTC days). */
+/** One row in `/sales` top-products table (last 10 UTC days vs prior 10 UTC days). */
 export type SalesOverviewTopProductRow = {
   sku: string;
   asin: string | null;

@@ -3,11 +3,98 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { SalesOverviewPayload } from "@/lib/sp/types";
+import type { SalesOverviewPayload, SalesOverviewTopProductRow } from "@/lib/sp/types";
 
 const CHART_TRACK_PX = 160;
-/** Must exceed server timeout when many SKUs are scanned for Top 10. */
+/** Must exceed server timeout when many SKUs are scanned for the top table. */
 const FETCH_TIMEOUT_MS = 630_000;
+
+type TopSortKey = "sku" | "inventory" | "unitsSold" | "salesTotal" | "unitsDelta" | "salesDelta";
+
+function numericSortValue(row: SalesOverviewTopProductRow, key: TopSortKey): number {
+  switch (key) {
+    case "inventory":
+      return row.inventory;
+    case "unitsSold":
+      return row.unitsSold;
+    case "salesTotal":
+      return row.salesTotal ?? Number.NaN;
+    case "unitsDelta":
+      if (row.unitsDeltaPct != null) return row.unitsDeltaPct;
+      if (row.unitsDeltaFromZero) return Number.POSITIVE_INFINITY;
+      return Number.NaN;
+    case "salesDelta":
+      if (row.salesDeltaPct != null) return row.salesDeltaPct;
+      if (row.salesDeltaFromZero) return Number.POSITIVE_INFINITY;
+      return Number.NaN;
+    default:
+      return Number.NaN;
+  }
+}
+
+function sortTopProductRows(
+  rows: SalesOverviewTopProductRow[],
+  key: TopSortKey,
+  dir: "asc" | "desc",
+): SalesOverviewTopProductRow[] {
+  const out = [...rows];
+  if (key === "sku") {
+    out.sort((a, b) => {
+      const cmp = a.sku.localeCompare(b.sku, undefined, { sensitivity: "base" });
+      return dir === "asc" ? cmp : -cmp;
+    });
+    return out;
+  }
+  out.sort((a, b) => {
+    const va = numericSortValue(a, key);
+    const vb = numericSortValue(b, key);
+    const na = Number.isNaN(va);
+    const nb = Number.isNaN(vb);
+    if (na && nb) return 0;
+    if (na) return 1;
+    if (nb) return -1;
+    const cmp = va - vb;
+    return dir === "asc" ? cmp : -cmp;
+  });
+  return out;
+}
+
+function SortableTh({
+  label,
+  colKey,
+  activeKey,
+  dir,
+  onSort,
+  align = "left",
+}: {
+  label: string;
+  colKey: TopSortKey;
+  activeKey: TopSortKey;
+  dir: "asc" | "desc";
+  onSort: (k: TopSortKey) => void;
+  align?: "left" | "right";
+}) {
+  const active = activeKey === colKey;
+  return (
+    <th
+      scope="col"
+      className={`px-3 py-3 sm:px-4 ${align === "right" ? "text-right" : "text-left"}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(colKey)}
+        className={`group inline-flex items-center gap-1 rounded-md text-xs font-medium uppercase tracking-wide text-zinc-500 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:text-zinc-400 dark:hover:text-zinc-100 ${
+          align === "right" ? "w-full justify-end" : ""
+        }`}
+      >
+        <span>{label}</span>
+        <span className="select-none tabular-nums text-[10px] text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300">
+          {active ? (dir === "asc" ? "↑" : "↓") : "↕"}
+        </span>
+      </button>
+    </th>
+  );
+}
 
 let salesOverviewFetchSeq = 0;
 
@@ -144,7 +231,18 @@ export function SalesOverview() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chartMetric, setChartMetric] = useState<ChartMetric>("units");
+  const [topSortKey, setTopSortKey] = useState<TopSortKey>("unitsSold");
+  const [topSortDir, setTopSortDir] = useState<"asc" | "desc">("desc");
   const fetchAbortRef = useRef<AbortController | null>(null);
+
+  const handleTopSort = useCallback((key: TopSortKey) => {
+    if (key === topSortKey) {
+      setTopSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setTopSortKey(key);
+      setTopSortDir(key === "sku" ? "asc" : "desc");
+    }
+  }, [topSortKey]);
 
   const load = useCallback(async () => {
     const seq = ++salesOverviewFetchSeq;
@@ -196,6 +294,11 @@ export function SalesOverview() {
     if (c == null || p == null) return null;
     return pctChange(c, p);
   }, [data]);
+
+  const sortedTopProducts = useMemo(() => {
+    if (!data?.topProducts.length) return [];
+    return sortTopProductRows(data.topProducts, topSortKey, topSortDir);
+  }, [data?.topProducts, topSortKey, topSortDir]);
 
   return (
     <div className="mx-auto flex min-w-0 w-full max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 lg:px-8">
@@ -348,11 +451,12 @@ export function SalesOverview() {
 
           <section className="flex flex-col gap-3">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-              Top 10 selling products
+              Top 20 selling products
             </h2>
             <p className="max-w-3xl text-sm text-zinc-600 dark:text-zinc-400">
-              Ranked by units sold in the last 10 UTC days (per-SKU Sales API). “vs prior 10d” compares the
-              same SKU to the <strong>previous</strong> 10 UTC days.{" "}
+              Ranked by units sold in the last 10 UTC days (per-SKU Sales API); click a column header to sort
+              ascending or descending. “vs prior 10d” compares the same SKU to the <strong>previous</strong>{" "}
+              10 UTC days.{" "}
               <span className="text-emerald-600 dark:text-emerald-400">New</span> means that column had{" "}
               <strong>zero</strong> in the prior window and <strong>some</strong> in the current window (not
               “unchanged”). <strong>0.0%</strong> means the two windows match when the prior window was already
@@ -372,16 +476,57 @@ export function SalesOverview() {
                   <thead>
                     <tr className="text-left text-xs font-medium uppercase tracking-wide text-zinc-500">
                       <th className="px-3 py-3 sm:px-4">Thumbnail</th>
-                      <th className="px-3 py-3 sm:px-4">SKU</th>
-                      <th className="px-3 py-3 text-right sm:px-4">Inventory</th>
-                      <th className="px-3 py-3 text-right sm:px-4">Units (10d)</th>
-                      <th className="px-3 py-3 text-right sm:px-4">Sales (10d)</th>
-                      <th className="px-3 py-3 text-right sm:px-4">Units vs prior 10d</th>
-                      <th className="px-3 py-3 text-right sm:px-4">Sales vs prior 10d</th>
+                      <SortableTh
+                        label="SKU"
+                        colKey="sku"
+                        activeKey={topSortKey}
+                        dir={topSortDir}
+                        onSort={handleTopSort}
+                      />
+                      <SortableTh
+                        label="Inventory"
+                        colKey="inventory"
+                        activeKey={topSortKey}
+                        dir={topSortDir}
+                        onSort={handleTopSort}
+                        align="right"
+                      />
+                      <SortableTh
+                        label="Units (10d)"
+                        colKey="unitsSold"
+                        activeKey={topSortKey}
+                        dir={topSortDir}
+                        onSort={handleTopSort}
+                        align="right"
+                      />
+                      <SortableTh
+                        label="Sales (10d)"
+                        colKey="salesTotal"
+                        activeKey={topSortKey}
+                        dir={topSortDir}
+                        onSort={handleTopSort}
+                        align="right"
+                      />
+                      <SortableTh
+                        label="Units vs prior 10d"
+                        colKey="unitsDelta"
+                        activeKey={topSortKey}
+                        dir={topSortDir}
+                        onSort={handleTopSort}
+                        align="right"
+                      />
+                      <SortableTh
+                        label="Sales vs prior 10d"
+                        colKey="salesDelta"
+                        activeKey={topSortKey}
+                        dir={topSortDir}
+                        onSort={handleTopSort}
+                        align="right"
+                      />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {data.topProducts.map((row) => {
+                    {sortedTopProducts.map((row) => {
                       const cur = row.salesCurrency ?? fallbackCurrency;
                       return (
                         <tr key={row.sku} className="text-zinc-900 dark:text-zinc-100">

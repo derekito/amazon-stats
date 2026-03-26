@@ -32,6 +32,9 @@ import type {
   SalesPoint,
 } from "@/lib/sp/types";
 
+/** Rows returned for `/sales` top-products table (by units in the last 10 UTC days). */
+export const SALES_TOP_PRODUCT_COUNT = 20;
+
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function shortLabelFromInterval(interval: string | undefined, index: number): string {
@@ -216,11 +219,11 @@ async function buildTopProducts(
   }
 
   metrics.sort((a, b) => b.units - a.units);
-  const top10 = metrics.slice(0, 10);
+  const topN = metrics.slice(0, SALES_TOP_PRODUCT_COUNT);
 
   const priorBySku = new Map<string, { units: number; salesAmount: number | null; salesCurrency: string | null }>();
-  for (let i = 0; i < top10.length; i += SKU_BATCH) {
-    const chunk = top10.slice(i, i + SKU_BATCH);
+  for (let i = 0; i < topN.length; i += SKU_BATCH) {
+    const chunk = topN.slice(i, i + SKU_BATCH);
     await Promise.all(
       chunk.map(async (c) => {
         try {
@@ -236,14 +239,14 @@ async function buildTopProducts(
         }
       }),
     );
-    if (i + SKU_BATCH < top10.length) await delay(250);
+    if (i + SKU_BATCH < topN.length) await delay(250);
   }
 
   const thumbCap = env.SP_API_MAX_ASIN_THUMBNAILS;
   const imageByAsin = new Map<string, string | null>();
   if (thumbCap > 0) {
-    const asins = [...new Set(top10.map((c) => c.row.asin).filter(Boolean))] as string[];
-    const toFetch = asins.slice(0, Math.min(10, thumbCap));
+    const asins = [...new Set(topN.map((c) => c.row.asin).filter(Boolean))] as string[];
+    const toFetch = asins.slice(0, Math.min(SALES_TOP_PRODUCT_COUNT, thumbCap));
     const ASIN_CONCURRENCY = 4;
     for (let i = 0; i < toFetch.length; i += ASIN_CONCURRENCY) {
       const chunk = toFetch.slice(i, i + ASIN_CONCURRENCY);
@@ -258,7 +261,7 @@ async function buildTopProducts(
     }
   }
 
-  const topProducts: SalesOverviewTopProductRow[] = top10.map((c) => {
+  const topProducts: SalesOverviewTopProductRow[] = topN.map((c) => {
     const qty = inventoryDisplayQuantity(c.row);
     const prior = priorBySku.get(c.sku) ?? {
       units: 0,
