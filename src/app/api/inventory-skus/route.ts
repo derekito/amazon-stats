@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getEnv, hasSpApiCredentials } from "@/lib/env";
+import { resolveStoreId } from "@/lib/resolve-store";
 import { createSellingPartner } from "@/lib/sp/client";
 import { formatSpApiError } from "@/lib/sp/error-message";
 import {
@@ -25,11 +26,12 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const includeExcluded = searchParams.get("all") === "1";
 
-  const env = getEnv();
+  const storeId = await resolveStoreId();
+  const env = getEnv(storeId);
   if (env.SP_API_USE_MOCK || !hasSpApiCredentials(env)) {
     let skus = MOCK_INVENTORY_SKUS;
     if (!includeExcluded) {
-      const ex = await loadSkuExclusionsSet();
+      const ex = await loadSkuExclusionsSet(storeId);
       skus = skus.filter((s) => !ex.has(s.sku));
     }
     return NextResponse.json({
@@ -62,7 +64,7 @@ export async function GET(req: Request) {
       .filter((x): x is NonNullable<typeof x> => x != null);
 
     if (!includeExcluded) {
-      const ex = await loadSkuExclusionsSet();
+      const ex = await loadSkuExclusionsSet(storeId);
       skus = skus.filter((s) => !ex.has(s.sku));
     }
 

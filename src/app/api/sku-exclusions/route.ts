@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { resolveStoreId } from "@/lib/resolve-store";
 import {
   loadSkuExclusionsList,
   saveSkuExclusionsList,
@@ -8,7 +9,8 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const excluded = await loadSkuExclusionsList();
+  const storeId = await resolveStoreId();
+  const excluded = await loadSkuExclusionsList(storeId);
   return NextResponse.json({ excluded });
 }
 
@@ -31,7 +33,8 @@ export async function PUT(req: Request) {
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
   try {
-    await saveSkuExclusionsList(list);
+    const storeId = await resolveStoreId();
+    await saveSkuExclusionsList(list, storeId);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Save failed";
     return NextResponse.json({ error: message }, { status: 503 });

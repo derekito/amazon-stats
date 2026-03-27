@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getEnv, hasSpApiCredentials } from "@/lib/env";
+import { resolveStoreId } from "@/lib/resolve-store";
 import { createSellingPartner } from "@/lib/sp/client";
 import { spApiErrorDetails } from "@/lib/sp/error-details";
 import { resolveMarketplaceId } from "@/lib/sp/marketplace";
@@ -21,7 +22,8 @@ export async function GET() {
     );
   }
 
-  const env = getEnv();
+  const storeId = await resolveStoreId();
+  const env = getEnv(storeId);
   if (!hasSpApiCredentials(env)) {
     return NextResponse.json({
       configured: false,

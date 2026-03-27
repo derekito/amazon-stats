@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getEnv, hasSpApiCredentials } from "@/lib/env";
+import { resolveStoreId } from "@/lib/resolve-store";
 import { createSellingPartner } from "@/lib/sp/client";
 import { fetchLiveSalesOverview } from "@/lib/sp/fetch-sales-overview";
 import { formatSpApiError } from "@/lib/sp/error-message";
@@ -27,7 +28,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 export async function GET() {
-  const env = getEnv();
+  const storeId = await resolveStoreId();
+  const env = getEnv(storeId);
   if (env.SP_API_USE_MOCK || !hasSpApiCredentials(env)) {
     return NextResponse.json(getMockSalesOverview());
   }
@@ -35,7 +37,7 @@ export async function GET() {
   try {
     const sp = createSellingPartner(env);
     const data = await withTimeout(
-      fetchLiveSalesOverview(sp, env),
+      fetchLiveSalesOverview(sp, env, storeId),
       env.SP_API_DASHBOARD_TIMEOUT_MS,
       "Sales overview fetch",
     );

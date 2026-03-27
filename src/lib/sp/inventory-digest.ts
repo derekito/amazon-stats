@@ -78,7 +78,7 @@ export async function buildInventoryDigestRows(
   const period = env.SP_DIGEST_PERIOD as SalesPeriod;
   const range = getOrderMetricsRange(period);
   const forecastWindowDays = intervalSpanDays(range.interval);
-  const skuExcluded = await loadSkuExclusionsSet();
+  const skuExcluded = await loadSkuExclusionsSet("na");
   const skuThresholds = loadSkuThresholdsMap();
 
   const invWrap = await runSpStep("FBA Inventory (digest)", () =>

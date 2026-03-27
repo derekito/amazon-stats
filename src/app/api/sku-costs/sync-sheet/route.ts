@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getEnv } from "@/lib/env";
+import { resolveStoreId } from "@/lib/resolve-store";
 import {
   responseLooksLikeHtml,
   toGoogleSheetCsvExportUrl,
@@ -11,7 +12,8 @@ import { parseSkuCostsCsv } from "@/lib/sp/parse-sku-costs-csv";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const env = getEnv();
+  const storeId = await resolveStoreId();
+  const env = getEnv(storeId);
   const rawUrl = env.SP_SKU_COSTS_SHEET_CSV_URL;
   if (!rawUrl) {
     return NextResponse.json(
@@ -72,10 +74,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const existing = await loadSkuCostsMap();
+  const existing = await loadSkuCostsMap(storeId);
   const next = merge ? { ...existing, ...imported } : imported;
   try {
-    await saveSkuCostsMap(next);
+    await saveSkuCostsMap(next, storeId);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Save failed";
     return NextResponse.json({ error: message }, { status: 503 });

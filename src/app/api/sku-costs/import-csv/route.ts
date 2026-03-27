@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { resolveStoreId } from "@/lib/resolve-store";
 import { loadSkuCostsMap, saveSkuCostsMap } from "@/lib/sp/load-sku-costs";
 import { parseSkuCostsCsv } from "@/lib/sp/parse-sku-costs-csv";
 
@@ -27,10 +28,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No valid rows (need sku + unitCost columns)" }, { status: 400 });
   }
 
-  const existing = await loadSkuCostsMap();
+  const storeId = await resolveStoreId();
+  const existing = await loadSkuCostsMap(storeId);
   const next = merge ? { ...existing, ...imported } : imported;
   try {
-    await saveSkuCostsMap(next);
+    await saveSkuCostsMap(next, storeId);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Save failed";
     return NextResponse.json({ error: message }, { status: 503 });

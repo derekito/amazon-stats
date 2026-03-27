@@ -5,13 +5,20 @@ import path from "path";
 
 import { get, put } from "@vercel/blob";
 
-const FILE = "sku-exclusions.json";
+import type { StoreId } from "@/lib/store";
 
-/** Stable pathname in the Vercel Blob store (private). */
-const BLOB_PATHNAME = "amazon-sales/sku-exclusions.json";
+const LEGACY_BLOB_PATH = "amazon-sales/sku-exclusions.json";
 
-function filePath(): string {
-  return path.join(process.cwd(), "data", FILE);
+function blobPathForStore(storeId: StoreId): string {
+  return `amazon-sales/${storeId}/sku-exclusions.json`;
+}
+
+function localFileName(storeId: StoreId): string {
+  return storeId === "na" ? "sku-exclusions.json" : `sku-exclusions.${storeId}.json`;
+}
+
+function filePath(storeId: StoreId): string {
+  return path.join(process.cwd(), "data", localFileName(storeId));
 }
 
 function blobEnabled(): boolean {
@@ -45,15 +52,19 @@ function parseJsonList(text: string): string[] {
   }
 }
 
-async function loadFromBlob(): Promise<string[]> {
-  const result = await get(BLOB_PATHNAME, { access: "private", useCache: false });
+async function loadFromBlob(storeId: StoreId): Promise<string[]> {
+  const pathname = blobPathForStore(storeId);
+  let result = await get(pathname, { access: "private", useCache: false });
+  if (storeId === "na" && (!result || result.statusCode !== 200 || !result.stream)) {
+    result = await get(LEGACY_BLOB_PATH, { access: "private", useCache: false });
+  }
   if (!result || result.statusCode !== 200 || !result.stream) return [];
   const text = await new Response(result.stream).text();
   return parseJsonList(text);
 }
 
-function loadFromFile(): string[] {
-  const fp = filePath();
+function loadFromFile(storeId: StoreId): string[] {
+  const fp = filePath(storeId);
   if (!existsSync(fp)) return [];
   try {
     return parseJsonList(readFileSync(fp, "utf8"));
@@ -62,30 +73,30 @@ function loadFromFile(): string[] {
   }
 }
 
-/** SKUs hidden on the dashboard and costs UI — from Blob (Vercel) or `data/sku-exclusions.json` (local). */
-export async function loadSkuExclusionsList(): Promise<string[]> {
+/** SKUs hidden on the dashboard and costs UI — from Blob (Vercel) or `data/sku-exclusions.<store>.json` (local). */
+export async function loadSkuExclusionsList(storeId: StoreId = "na"): Promise<string[]> {
   if (blobEnabled()) {
     try {
-      return await loadFromBlob();
+      return await loadFromBlob(storeId);
     } catch {
       return [];
     }
   }
-  return loadFromFile();
+  return loadFromFile(storeId);
 }
 
-export async function loadSkuExclusionsSet(): Promise<Set<string>> {
-  return new Set(await loadSkuExclusionsList());
+export async function loadSkuExclusionsSet(storeId: StoreId = "na"): Promise<Set<string>> {
+  return new Set(await loadSkuExclusionsList(storeId));
 }
 
-export async function saveSkuExclusionsList(skus: string[]): Promise<void> {
+export async function saveSkuExclusionsList(skus: string[], storeId: StoreId = "na"): Promise<void> {
   const unique = [
     ...new Set(skus.map((s) => s.trim()).filter((s) => s.length > 0)),
   ].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
   const body = `${JSON.stringify(unique, null, 2)}\n`;
 
   if (blobEnabled()) {
-    await put(BLOB_PATHNAME, body, {
+    await put(blobPathForStore(storeId), body, {
       access: "private",
       addRandomSuffix: false,
       allowOverwrite: true,
@@ -97,7 +108,7 @@ export async function saveSkuExclusionsList(skus: string[]): Promise<void> {
   try {
     const dir = path.join(process.cwd(), "data");
     mkdirSync(dir, { recursive: true });
-    writeFileSync(filePath(), body, "utf8");
+    writeFileSync(filePath(storeId), body, "utf8");
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     throw new Error(

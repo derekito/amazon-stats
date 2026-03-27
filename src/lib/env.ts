@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { StoreId } from "@/lib/store";
+
 /** Treat blank / whitespace-only env values as unset (common in .env.local placeholders). */
 function emptyEnvToUndefined(v: unknown): unknown {
   if (v === undefined || v === null) return undefined;
@@ -177,13 +179,43 @@ const envSchema = z.object({
 
 export type AppEnv = z.infer<typeof envSchema>;
 
-export function getEnv(): AppEnv {
+/**
+ * Selling Partner env for one store. `na` uses the primary `SP_*` vars; `bbs` uses optional
+ * `SP_BBS_*` overrides (refresh token, marketplace, region, LWA keys, sheet URLs) with fallback to primary.
+ */
+export function getEnv(storeId: StoreId = "na"): AppEnv {
+  const e = process.env;
+  const spRegion =
+    storeId === "bbs" ? e.SP_BBS_SP_API_REGION ?? e.SP_API_REGION : e.SP_API_REGION;
+  const spRefresh =
+    storeId === "bbs" ? e.SP_BBS_SP_API_REFRESH_TOKEN ?? e.SP_API_REFRESH_TOKEN : e.SP_API_REFRESH_TOKEN;
+  const spMarketplace =
+    storeId === "bbs"
+      ? e.SP_BBS_SP_API_MARKETPLACE_ID ?? e.SP_API_MARKETPLACE_ID
+      : e.SP_API_MARKETPLACE_ID;
+  const lwaId =
+    storeId === "bbs"
+      ? e.SP_BBS_SELLING_PARTNER_APP_CLIENT_ID ?? e.SELLING_PARTNER_APP_CLIENT_ID
+      : e.SELLING_PARTNER_APP_CLIENT_ID;
+  const lwaSecret =
+    storeId === "bbs"
+      ? e.SP_BBS_SELLING_PARTNER_APP_CLIENT_SECRET ?? e.SELLING_PARTNER_APP_CLIENT_SECRET
+      : e.SELLING_PARTNER_APP_CLIENT_SECRET;
+  const sheetUrl =
+    storeId === "bbs"
+      ? e.SP_BBS_SP_SKU_COSTS_SHEET_CSV_URL ?? e.SP_SKU_COSTS_SHEET_CSV_URL
+      : e.SP_SKU_COSTS_SHEET_CSV_URL;
+  const sheetGid =
+    storeId === "bbs"
+      ? e.SP_BBS_SP_SKU_COSTS_SHEET_GID ?? e.SP_SKU_COSTS_SHEET_GID
+      : e.SP_SKU_COSTS_SHEET_GID;
+
   return envSchema.parse({
-    SP_API_REGION: process.env.SP_API_REGION,
-    SP_API_REFRESH_TOKEN: process.env.SP_API_REFRESH_TOKEN,
-    SELLING_PARTNER_APP_CLIENT_ID: process.env.SELLING_PARTNER_APP_CLIENT_ID,
-    SELLING_PARTNER_APP_CLIENT_SECRET: process.env.SELLING_PARTNER_APP_CLIENT_SECRET,
-    SP_API_MARKETPLACE_ID: process.env.SP_API_MARKETPLACE_ID,
+    SP_API_REGION: spRegion,
+    SP_API_REFRESH_TOKEN: spRefresh,
+    SELLING_PARTNER_APP_CLIENT_ID: lwaId,
+    SELLING_PARTNER_APP_CLIENT_SECRET: lwaSecret,
+    SP_API_MARKETPLACE_ID: spMarketplace,
     SP_API_USE_MOCK: process.env.SP_API_USE_MOCK,
     SP_API_MAX_SKU_METRICS: process.env.SP_API_MAX_SKU_METRICS,
     SP_API_MAX_INVENTORY_PAGES: process.env.SP_API_MAX_INVENTORY_PAGES,
@@ -209,8 +241,8 @@ export function getEnv(): AppEnv {
     SP_DASHBOARD_REFERRAL_FEE_PERCENT: process.env.SP_DASHBOARD_REFERRAL_FEE_PERCENT,
     SP_DASHBOARD_FBA_FEE_PER_UNIT: process.env.SP_DASHBOARD_FBA_FEE_PER_UNIT,
     SP_DASHBOARD_ESTIMATED_ACOS_PERCENT: process.env.SP_DASHBOARD_ESTIMATED_ACOS_PERCENT,
-    SP_SKU_COSTS_SHEET_CSV_URL: process.env.SP_SKU_COSTS_SHEET_CSV_URL,
-    SP_SKU_COSTS_SHEET_GID: process.env.SP_SKU_COSTS_SHEET_GID,
+    SP_SKU_COSTS_SHEET_CSV_URL: sheetUrl,
+    SP_SKU_COSTS_SHEET_GID: sheetGid,
     SITE_ACCESS_EMAIL: process.env.SITE_ACCESS_EMAIL,
     SITE_ACCESS_PASSWORD: process.env.SITE_ACCESS_PASSWORD,
     SITE_ACCESS_AUTH_SECRET: process.env.SITE_ACCESS_AUTH_SECRET,

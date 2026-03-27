@@ -4,6 +4,7 @@ import { parseISO } from "date-fns";
 import type { SellingPartner } from "amazon-sp-api";
 
 import type { AppEnv } from "@/lib/env";
+import type { StoreId } from "@/lib/store";
 import {
   getOrderMetricsRange,
   getTenDayOrderMetricsRange,
@@ -299,10 +300,11 @@ async function buildTopProducts(
 export async function fetchLiveSalesOverview(
   sp: SellingPartner,
   env: AppEnv,
+  storeId: StoreId = "na",
 ): Promise<SalesOverviewPayload> {
   const [marketplaceId, skuExcluded] = await Promise.all([
     runSpStep("Sellers API (marketplace)", () => resolveMarketplaceId(sp, env)),
-    loadSkuExclusionsSet(),
+    loadSkuExclusionsSet(storeId),
   ]);
 
   const yRange = getOrderMetricsRange("day");

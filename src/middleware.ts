@@ -2,6 +2,18 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { SITE_AUTH_COOKIE, verifySiteSession } from "@/lib/site-auth-cookie";
+import { STORE_COOKIE_NAME } from "@/lib/store";
+
+/** HTML routes need a chosen seller account; APIs read the cookie or default to Naked Armor. */
+function needsStoreSelection(pathname: string): boolean {
+  if (pathname === "/" || pathname === "/login") return false;
+  if (pathname.startsWith("/api/")) return false;
+  return true;
+}
+
+function redirectToStorePicker(request: NextRequest) {
+  return NextResponse.redirect(new URL("/", request.url));
+}
 
 function gate() {
   const email = process.env.SITE_ACCESS_EMAIL?.trim();
@@ -24,6 +36,9 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const g = gate();
   if (!g) {
+    if (needsStoreSelection(pathname) && !request.cookies.has(STORE_COOKIE_NAME)) {
+      return redirectToStorePicker(request);
+    }
     return nextWithPathname(request, pathname);
   }
 
@@ -38,7 +53,12 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get(SITE_AUTH_COOKIE)?.value;
   if (token) {
     const session = await verifySiteSession(token, g.secret, g.email);
-    if (session) return nextWithPathname(request, pathname);
+    if (session) {
+      if (needsStoreSelection(pathname) && !request.cookies.has(STORE_COOKIE_NAME)) {
+        return redirectToStorePicker(request);
+      }
+      return nextWithPathname(request, pathname);
+    }
   }
 
   if (pathname.startsWith("/api/")) {

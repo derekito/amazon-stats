@@ -44,6 +44,7 @@ import type {
   SalesPoint,
 } from "@/lib/sp/types";
 import type { AppEnv } from "@/lib/env";
+import type { StoreId } from "@/lib/store";
 
 function filterExcludedInventory(
   rows: InventorySummaryRow[],
@@ -147,6 +148,7 @@ export async function fetchLiveDashboard(
   env: AppEnv,
   period: SalesPeriod,
   pageOptions: DashboardProductPageOptions = { productPage: 1, productPageSize: 40 },
+  storeId: StoreId = "na",
 ): Promise<DashboardPayload> {
   const marketplaceId = await runSpStep("Sellers API (marketplace)", () =>
     resolveMarketplaceId(sp, env),
@@ -155,8 +157,8 @@ export async function fetchLiveDashboard(
   const priorRange = getPriorOrderMetricsRange(period);
   const forecastWindowDays = intervalSpanDays(range.interval);
   const skuThresholds = loadSkuThresholdsMap();
-  const skuCosts = await loadSkuCostsMap();
-  const skuExcluded = await loadSkuExclusionsSet();
+  const skuCosts = await loadSkuCostsMap(storeId);
+  const skuExcluded = await loadSkuExclusionsSet(storeId);
   const referralFeePercent = env.SP_DASHBOARD_REFERRAL_FEE_PERCENT;
   const fbaFeePerUnit = env.SP_DASHBOARD_FBA_FEE_PER_UNIT;
   const estimatedAcosPercent = env.SP_DASHBOARD_ESTIMATED_ACOS_PERCENT;

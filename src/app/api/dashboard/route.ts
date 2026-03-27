@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getEnv, hasSpApiCredentials } from "@/lib/env";
+import { resolveStoreId } from "@/lib/resolve-store";
 import { createSellingPartner } from "@/lib/sp/client";
 import { fetchLiveDashboard } from "@/lib/sp/fetch-dashboard";
 import { formatSpApiError } from "@/lib/sp/error-message";
@@ -47,21 +48,22 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Invalid period" }, { status: 400 });
   }
 
-  const env = getEnv();
+  const storeId = await resolveStoreId();
+  const env = getEnv(storeId);
   const configuredPageSize = env.SP_DASHBOARD_PRODUCT_PAGE_SIZE;
   /** 0 = unlimited single page (server-side); otherwise env page size (1–50k). */
   const productPageSize = configuredPageSize <= 0 ? 0 : configuredPageSize;
   const productPage = parsePositiveInt(searchParams.get("productPage"), 1, 1, 10_000);
   if (env.SP_API_USE_MOCK || !hasSpApiCredentials(env)) {
     return NextResponse.json(
-      await getMockDashboard(period, { productPage, productPageSize }),
+      await getMockDashboard(period, { productPage, productPageSize, storeId }),
     );
   }
 
   try {
     const sp = createSellingPartner(env);
     const data = await withTimeout(
-      fetchLiveDashboard(sp, env, period, { productPage, productPageSize }),
+      fetchLiveDashboard(sp, env, period, { productPage, productPageSize }, storeId),
       env.SP_API_DASHBOARD_TIMEOUT_MS,
       "Live dashboard fetch",
     );
@@ -69,7 +71,7 @@ export async function GET(req: Request) {
   } catch (e) {
     const message = formatSpApiError(e);
     return NextResponse.json({
-      ...(await getMockDashboard(period, { productPage, productPageSize })),
+      ...(await getMockDashboard(period, { productPage, productPageSize, storeId })),
       mode: "mock",
       warning: `Could not load live Amazon data (${message}). Showing sample data instead.`,
     });

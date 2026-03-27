@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getEnv } from "@/lib/env";
+import { resolveStoreId } from "@/lib/resolve-store";
 import { loadSkuCostsMap, saveSkuCostsMap, type SkuCostEntry } from "@/lib/sp/load-sku-costs";
 
 export const dynamic = "force-dynamic";
@@ -27,8 +28,9 @@ function normalizeCostsBody(raw: unknown): Record<string, SkuCostEntry> | null {
 }
 
 export async function GET() {
-  const env = getEnv();
-  const costs = await loadSkuCostsMap();
+  const storeId = await resolveStoreId();
+  const env = getEnv(storeId);
+  const costs = await loadSkuCostsMap(storeId);
   return NextResponse.json({
     costs,
     sheetSyncConfigured: Boolean(env.SP_SKU_COSTS_SHEET_CSV_URL),
@@ -47,7 +49,8 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Expected body { costs: { [sku]: { unitCost, currency? } } }" }, { status: 400 });
   }
   try {
-    await saveSkuCostsMap(costs);
+    const storeId = await resolveStoreId();
+    await saveSkuCostsMap(costs, storeId);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Save failed";
     return NextResponse.json({ error: message }, { status: 503 });

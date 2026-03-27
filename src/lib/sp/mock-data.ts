@@ -6,6 +6,7 @@ import {
   type SalesPeriod,
 } from "@/lib/sp/intervals";
 import { estimateRoughMargin } from "@/lib/sp/margin-estimate";
+import type { StoreId } from "@/lib/store";
 import { loadSkuExclusionsSet } from "@/lib/sp/load-sku-exclusions";
 import { computeProductAlerts, velocityUnitsPerDay } from "@/lib/sp/product-insights";
 import type {
@@ -177,7 +178,7 @@ function mockProductPagination(
 
 export async function getMockDashboard(
   period: SalesPeriod,
-  options?: { productPage?: number; productPageSize?: number },
+  options?: { productPage?: number; productPageSize?: number; storeId?: StoreId },
 ): Promise<DashboardPayload> {
   const requestedSize = options?.productPageSize ?? 40;
   const unlimited = requestedSize <= 0;
@@ -192,7 +193,7 @@ export async function getMockDashboard(
   const currentSales = Math.round(currentTotalUnits * 14.25 * 100) / 100;
   const priorSales = Math.round(priorTotalUnits * 13.9 * 100) / 100;
 
-  const skuExcluded = await loadSkuExclusionsSet();
+  const skuExcluded = await loadSkuExclusionsSet(options?.storeId ?? "na");
   const excludedSkuCount = baseProducts.filter((p) => skuExcluded.has(p.sku)).length;
   const baseFiltered = baseProducts.filter((p) => !skuExcluded.has(p.sku));
 

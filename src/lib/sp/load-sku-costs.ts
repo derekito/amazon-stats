@@ -5,19 +5,26 @@ import path from "path";
 
 import { get, put } from "@vercel/blob";
 
+import type { StoreId } from "@/lib/store";
+
 export type SkuCostEntry = {
   unitCost: number;
   /** Defaults to marketplace sales currency when omitted. */
   currency?: string;
 };
 
-const SKU_COSTS_FILE = "sku-costs.json";
+const LEGACY_BLOB_PATH = "amazon-sales/sku-costs.json";
 
-/** Stable pathname in the Vercel Blob store (private). */
-const BLOB_PATHNAME = "amazon-sales/sku-costs.json";
+function blobPathForStore(storeId: StoreId): string {
+  return `amazon-sales/${storeId}/sku-costs.json`;
+}
 
-function skuCostsFilePath(): string {
-  return path.join(process.cwd(), "data", SKU_COSTS_FILE);
+function localFileName(storeId: StoreId): string {
+  return storeId === "na" ? "sku-costs.json" : `sku-costs.${storeId}.json`;
+}
+
+function skuCostsFilePath(storeId: StoreId): string {
+  return path.join(process.cwd(), "data", localFileName(storeId));
 }
 
 function blobEnabled(): boolean {
@@ -39,8 +46,12 @@ function parseSkuCostsRecord(raw: unknown): Record<string, SkuCostEntry> {
   return out;
 }
 
-async function loadFromBlob(): Promise<Record<string, SkuCostEntry>> {
-  const result = await get(BLOB_PATHNAME, { access: "private", useCache: false });
+async function loadFromBlob(storeId: StoreId): Promise<Record<string, SkuCostEntry>> {
+  const pathname = blobPathForStore(storeId);
+  let result = await get(pathname, { access: "private", useCache: false });
+  if (storeId === "na" && (!result || result.statusCode !== 200 || !result.stream)) {
+    result = await get(LEGACY_BLOB_PATH, { access: "private", useCache: false });
+  }
   if (!result || result.statusCode !== 200 || !result.stream) return {};
   const text = await new Response(result.stream).text();
   try {
@@ -50,8 +61,8 @@ async function loadFromBlob(): Promise<Record<string, SkuCostEntry>> {
   }
 }
 
-function loadFromFile(): Record<string, SkuCostEntry> {
-  const filePath = skuCostsFilePath();
+function loadFromFile(storeId: StoreId): Record<string, SkuCostEntry> {
+  const filePath = skuCostsFilePath(storeId);
   if (!existsSync(filePath)) return {};
   try {
     return parseSkuCostsRecord(JSON.parse(readFileSync(filePath, "utf8")) as unknown);
@@ -60,24 +71,27 @@ function loadFromFile(): Record<string, SkuCostEntry> {
   }
 }
 
-/** Optional unit costs — from Blob (Vercel) or `data/sku-costs.json` (local). */
-export async function loadSkuCostsMap(): Promise<Record<string, SkuCostEntry>> {
+/** Optional unit costs — from Blob (Vercel) or `data/sku-costs.json` (local, per store). */
+export async function loadSkuCostsMap(storeId: StoreId = "na"): Promise<Record<string, SkuCostEntry>> {
   if (blobEnabled()) {
     try {
-      return await loadFromBlob();
+      return await loadFromBlob(storeId);
     } catch {
       return {};
     }
   }
-  return loadFromFile();
+  return loadFromFile(storeId);
 }
 
-/** Writes unit costs to Blob or `data/sku-costs.json`. */
-export async function saveSkuCostsMap(map: Record<string, SkuCostEntry>): Promise<void> {
+/** Writes unit costs to Blob or `data/sku-costs.<store>.json`. */
+export async function saveSkuCostsMap(
+  map: Record<string, SkuCostEntry>,
+  storeId: StoreId = "na",
+): Promise<void> {
   const body = `${JSON.stringify(map, null, 2)}\n`;
 
   if (blobEnabled()) {
-    await put(BLOB_PATHNAME, body, {
+    await put(blobPathForStore(storeId), body, {
       access: "private",
       addRandomSuffix: false,
       allowOverwrite: true,
@@ -89,7 +103,7 @@ export async function saveSkuCostsMap(map: Record<string, SkuCostEntry>): Promis
   try {
     const dir = path.join(process.cwd(), "data");
     mkdirSync(dir, { recursive: true });
-    writeFileSync(skuCostsFilePath(), body, "utf8");
+    writeFileSync(skuCostsFilePath(storeId), body, "utf8");
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     throw new Error(

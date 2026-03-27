@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { SiteNav } from "@/components/site-nav";
+import { STORE_COOKIE_NAME } from "@/lib/store";
 
 import "./globals.css";
 
@@ -27,7 +28,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = (await headers()).get("x-pathname") ?? "";
-  const showNav = pathname !== "/login";
+  const hasStore = Boolean((await cookies()).get(STORE_COOKIE_NAME)?.value);
+  /** Hide nav on the store chooser (`/` with no cookie). */
+  const showNav = pathname !== "/login" && !(pathname === "/" && !hasStore);
 
   return (
     <html

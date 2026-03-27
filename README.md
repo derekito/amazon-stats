@@ -31,6 +31,10 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Two seller accounts (Naked Armor + BirdBeSafe)
+
+The first screen lets you pick a **store** (saved in a browser cookie). Dashboard, sales, and API calls use that account’s SP-API credentials. **SKU costs** and **exclusions** are kept separate per store (Blob: `amazon-sales/<na|bbs>/…`; locally `data/sku-costs.bbs.json` and `data/sku-exclusions.bbs.json` for BirdBeSafe). Configure optional **`SP_BBS_*`** variables in `.env.local` for BirdBeSafe’s refresh token and marketplace. Primary **`SP_*`** vars remain **Naked Armor**. The inventory **email digest** cron still uses **Naked Armor** only (`getEnv("na")`).
+
 ### Optional site password (email + password)
 
 To put a simple gate in front of the whole app (pages and `/api/*` except auth and cron), set **all three** in `.env.local`:
